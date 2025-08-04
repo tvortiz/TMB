@@ -1,0 +1,66 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    container_name: tmb_backend
+    depends_on:
+      - db
+      - rabbitmq
+      
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=development
+    container_name: tmb_frontend
+    depends_on:
+      - backend
+
+  db:
+    container_name: PostgreSQL
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: TMB
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # sudo docker exec -it PostgreSQL bash
+    # psql -h 127.0.0.1 -U postgres
+    # \c TMB
+    # \dt
+    # \d "Pedidos"
+    # insert into "Pedidos" ("Cliente","Produto","Valor","Status") VALUES ('cliente', 'prod 1', 123, 'Pendente');
+    
+    # Para remover o volume e refazer o banco, rodar:
+    # sudo docker compose down --volumes
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+      - rabbitmq
+    links: 
+      - rabbitmq
+      
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"     # RabbitMQ broker
+      - "15672:15672"   # Management UI
+
+volumes:
+  pgdata:
